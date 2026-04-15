@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Exam Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f7fa;
+            --text-primary: #1a1a2e;
+            --text-secondary: #4a4a6a;
+            --card-bg: #ffffff;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --border-color: #e8ecf1;
+            --accent-color: #6c63ff;
+            --correct-bg: #d4edda;
+            --correct-text: #155724;
+            --option-hover: #f8f9ff;
+            --toggle-bg: #e0e0e0;
+            --toggle-active: #6c63ff;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --text-primary: #e4e4e4;
+            --text-secondary: #b0b0b0;
+            --card-bg: #1e1e1e;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            --border-color: #333333;
+            --accent-color: #8b83ff;
+            --correct-bg: #1b3d20;
+            --correct-text: #4caf50;
+            --option-hover: #2a2a2a;
+            --toggle-bg: #333333;
+            --toggle-active: #8b83ff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            line-height: 1.6;
+        }
+
+        /* Header / Top Bar */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            letter-spacing: -0.5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: nowrap;
+        }
+
+        .control-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 48px;
+            min-height: 48px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 50px;
+            background: var(--toggle-bg);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+            background: var(--toggle-active);
+            color: white;
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .control-btn.active {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .control-btn svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        /* Card */
+        .exam-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        /* Layout Modes */
+        .content-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .content-wrapper.horizontal {
+            flex-direction: row;
+            gap: 32px;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper.horizontal {
+                flex-direction: row;
+                gap: 24px;
+            }
+            
+            .question-section,
+            .options-section {
+                flex: 1;
+                min-width: 0;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .content-wrapper.horizontal {
+                flex-direction: column;
+                gap: 24px;
+            }
+        }
+
+        /* Question Section */
+        .question-section {
+            flex: 1;
+        }
+
+        .question-label {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent-color), #a78bfa);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .question-text {
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.5;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        /* Options Section */
+        .options-section {
+            flex: 1;
+        }
+
+        .options-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 18px;
+            background: var(--bg-secondary);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .option-item:hover {
+            background: var(--option-hover);
+            transform: translateX(4px);
+            border-color: var(--accent-color);
+        }
+
+        .option-letter {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--accent-color);
+            color: white;
+            font-weight: 700;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .option-text {
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .option-item.correct {
+            background: var(--correct-bg);
+            border-color: var(--correct-text);
+        }
+
+        .option-item.correct .option-letter {
+            background: var(--correct-text);
+        }
+
+        .option-item.correct .option-text {
+            color: var(--correct-text);
+            font-weight: 700;
+        }
+
+        /* Answer & Explanation */
+        .answer-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 2px dashed var(--border-color);
+        }
+
+        .answer-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--correct-bg);
+            color: var(--correct-text);
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+
+        .answer-badge svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .explanation {
+            background: var(--bg-secondary);
+            padding: 18px 22px;
+            border-radius: 14px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .explanation-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .explanation-text {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .header {
+                padding: 12px 16px;
+            }
+
+            .header-title {
+                font-size: 1.05rem;
+            }
+
+            .control-btn {
+                padding: 10px 14px;
+                font-size: 0.8rem;
+                min-height: 46px;
+            }
+
+            .container {
+                padding: 16px 12px;
+            }
+
+            .exam-card {
+                padding: 20px;
+                border-radius: 16px;
+            }
+
+            .question-text {
+                font-size: 1.15rem;
+            }
+
+            .option-item {
+                padding: 14px 14px;
+            }
+
+            .option-text {
+                font-size: 0.95rem;
+            }
+        }
+
+        /* Small screens - still show button text */
+        @media (max-width: 400px) {
+            .header-title {
+                font-size: 0.95rem;
+            }
+            
+            .control-btn {
+                padding: 10px 12px;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Animation for theme switch */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .exam-card {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        /* Landscape mode specific styles */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .header {
+                padding: 8px 16px;
+            }
+            
+            .header-title {
+                font-size: 1rem;
+            }
+            
+            .control-btn {
+                padding: 8px 14px;
+                min-height: 40px;
+            }
+            
+            .container {
+                padding: 12px 16px;
+                max-width: 100%;
+            }
+            
+            .exam-card {
+                padding: 20px;
+            }
+            
+            .question-text {
+                font-size: 1.1rem;
+            }
+            
+            .answer-section {
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 16px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Status Indicator */
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ffc107;
+            margin-right: 6px;
+            animation: pulse-dot 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #28a745;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .live-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body data-theme="light" data-layout="vertical">
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading question...</div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="header-title">🎓 AI Exam Assistant</div>
+            <div class="live-status">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Waiting for data...</span>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="control-btn" id="themeToggle" onclick="toggleTheme()">
+                <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span>Theme</span>
+            </button>
+            <button class="control-btn" id="layoutToggle" onclick="toggleLayout()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="12" y1="3" x2="12" y2="21"></line>
+                </svg>
+                <span>Layout</span>
+            </button>
+            <button class="control-btn" onclick="fetchData()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                <span>Refresh</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <div class="exam-card">
+            <div class="content-wrapper" id="contentWrapper">
+                
+                <!-- Question Section -->
+                <section class="question-section">
+                    <span class="question-label">Question</span>
+                    <p class="question-text" id="questionText">Waiting for question...</p>
+                    
+                    <div class="answer-section">
+                        <div class="answer-badge" id="answerBadge">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span id="answerText">Correct Answer: -</span>
+                        </div>
+                        <div class="explanation">
+                            <div class="explanation-label">Explanation</div>
+                            <p class="explanation-text" id="explanationText">Waiting for data...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Options Section -->
+                <section class="options-section">
+                    <div class="options-label">Select your answer:</div>
+                    <div class="options-list" id="optionsList">
+                        <div class="option-item" id="optionA">
+                            <span class="option-letter">A</span>
+                            <span class="option-text">Option A</span>
+                        </div>
+                        <div class="option-item" id="optionB">
+                            <span class="option-letter">B</span>
+                            <span class="option-text">Option B</span>
+                        </div>
+                        <div class="option-item" id="optionC">
+                            <span class="option-letter">C</span>
+                            <span class="option-text">Option C</span>
+                        </div>
+                        <div class="option-item" id="optionD">
+                            <span class="option-letter">D</span>
+                            <span class="option-text">Option D</span>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Theme Toggle Functionality
+        let isDarkMode = false;
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            const body = document.body;
+            const themeIcon = document.getElementById('themeIcon');
+            const themeBtn = document.getElementById('themeToggle');
+
+            if (isDarkMode) {
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+                themeBtn.classList.add('active');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.setAttribute('data-theme', 'light');
+                themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+                themeBtn.classList.remove('active');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Layout Toggle Functionality
+        let isHorizontal = false;
+
+        function toggleLayout() {
+            isHorizontal = !isHorizontal;
+            const contentWrapper = document.getElementById('contentWrapper');
+            const layoutBtn = document.getElementById('layoutToggle');
+
+            if (isHorizontal) {
+                contentWrapper.classList.add('horizontal');
+                layoutBtn.classList.add('active');
+                localStorage.setItem('layout', 'horizontal');
+            } else {
+                contentWrapper.classList.remove('horizontal');
+                layoutBtn.classList.remove('active');
+                localStorage.setItem('layout', 'vertical');
+            }
+        }
+
+        // Load saved preferences
+        function loadPreferences() {
+            // Load theme
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                toggleTheme();
+            }
+
+            // Load layout
+            const savedLayout = localStorage.getItem('layout');
+            if (savedLayout === 'horizontal') {
+                toggleLayout();
+            }
+        }
+
+        // Add click interaction to options
+        document.querySelectorAll('.option-item').forEach(option => {
+            option.addEventListener('click', function() {
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        });
+
+        // Prevent double-tap zoom on mobile buttons
+        document.querySelectorAll('.control-btn').forEach(btn => {
+            btn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                this.click();
+            }, { passive: false });
+        });
+
+        // ==================== DATA FETCHING ====================
+        
+        let lastData = null;
+
+        async function fetchData() {
+            try {
+                const res = await fetch("/data");
+                
+                if (!res.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                const data = await res.json();
+
+                // Check if data actually changed
+                if (JSON.stringify(data) === JSON.stringify(lastData)) {
+                    return; // Skip update if same data
+                }
+                
+                lastData = data;
+
+                // Update status indicator
+                const statusDot = document.getElementById('statusDot');
+                const statusText = document.getElementById('statusText');
+                statusDot.classList.add('connected');
+                statusText.textContent = `Last updated: ${data.timestamp || 'Just now'}`;
+
+                // Hide loading overlay
+                document.getElementById('loadingOverlay').classList.add('hidden');
+
+                // Update Question
+                if (data.question && data.question.trim()) {
+                    document.getElementById('questionText').textContent = data.question;
+                } else {
+                    document.getElementById('questionText').textContent = 'No question captured yet';
+                }
+
+                // Update Options
+                const options = ['A', 'B', 'C', 'D'];
+                const optionIds = ['optionA', 'optionB', 'optionC', 'optionD'];
+                
+                options.forEach((letter, i) => {
+                    const optElement = document.getElementById(optionIds[i]);
+                    const textSpan = optElement.querySelector('.option-text');
+                    
+                    // Remove correct class first
+                    optElement.classList.remove('correct');
+                    
+                    // Update option text
+                    if (data.options && data.options[i]) {
+                        textSpan.textContent = data.options[i];
+                    } else {
+                        textSpan.textContent = `${letter} Option not available`;
+                    }
+                    
+                    // Add correct class if this is the answer
+                    if (data.answer && data.answer.toUpperCase() === letter) {
+                        optElement.classList.add('correct');
+                    }
+                });
+
+                // Update Answer Badge
+                if (data.answer) {
+                    document.getElementById('answerText').textContent = `Correct Answer: ${data.answer.toUpperCase()}`;
+                } else {
+                    document.getElementById('answerText').textContent = 'Correct Answer: -';
+                }
+
+                // Update Explanation
+                if (data.explanation && data.explanation.trim()) {
+                    document.getElementById('explanationText').textContent = data.explanation;
+                } else {
+                    document.getElementById('explanationText').textContent = 'No explanation available yet.';
+                }
+
+                // Add animation effect
+                const card = document.querySelector('.exam-card');
+                card.style.animation = 'none';
+                card.offsetHeight; // Trigger reflow
+                card.style.animation = 'fadeIn 0.5s ease-out';
+
+            } catch (error) {
+                console.log('Error fetching data:', error);
+                
+                // Update status to show disconnected
+                const statusDot = document.getElementById('statusDot');
+                const statusText = document.getElementById('statusText');
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Unable to connect to server';
+                
+                // Show loading overlay with error
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                document.querySelector('.loading-text').textContent = 'Connection lost... Retrying';
+            }
+        }
+
+        // Initial load
+        loadPreferences();
+        fetchData();
+
+        // Auto refresh every 2 seconds
+        setInterval(fetchData, 2000);
+
+        // Full page reload every 60 seconds to prevent memory leaks
+        setInterval(() => {
+            location.reload();
+        }, 60000);
+
+    </script>
+
+</body>
+</html>
