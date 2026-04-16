@@ -80,6 +80,27 @@
             display: flex;
             gap: 12px;
             flex-wrap: nowrap;
+            position: relative;
+        }
+
+        /* Hamburger Menu Dropdown */
+        .menu-dropdown {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            padding: 10px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 180px;
+            z-index: 2000;
+        }
+
+        .menu-dropdown.show {
+            display: flex;
         }
 
         .control-btn {
@@ -483,6 +504,14 @@
             display: flex;
             align-items: center;
         }
+
+        /* Mobile Hide Header Text */
+        @media (max-width: 600px) {
+            .header-title,
+            .live-status {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body data-theme="light" data-layout="vertical">
@@ -503,26 +532,31 @@
             </div>
         </div>
         <div class="controls">
-            <button class="control-btn" id="themeToggle" onclick="toggleTheme()">
-                <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                </svg>
-                <span>Theme</span>
+            <button class="control-btn" id="menuToggle" onclick="toggleMenu()">
+                ☰
             </button>
-            <button class="control-btn" id="layoutToggle" onclick="toggleLayout()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="12" y1="3" x2="12" y2="21"></line>
-                </svg>
-                <span>Layout</span>
-            </button>
-            <button class="control-btn" onclick="fetchData()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="23 4 23 10 17 10"></polyline>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                </svg>
-                <span>Refresh</span>
-            </button>
+            <div class="menu-dropdown" id="menuDropdown">
+                <button class="control-btn" id="themeToggle" onclick="toggleTheme()">
+                    <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <span>Theme</span>
+                </button>
+                <button class="control-btn" id="layoutToggle" onclick="toggleLayout()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="12" y1="3" x2="12" y2="21"></line>
+                    </svg>
+                    <span>Layout</span>
+                </button>
+                <button class="control-btn" onclick="fetchData()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                    <span>Refresh</span>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -619,6 +653,12 @@
             }
         }
 
+        // Menu Toggle Functionality
+        function toggleMenu() {
+            const menu = document.getElementById("menuDropdown");
+            menu.classList.toggle("show");
+        }
+
         // Load saved preferences
         function loadPreferences() {
             // Load theme
@@ -713,12 +753,18 @@
                     }
                 });
 
-                // Update Answer Badge
-                if (data.answer) {
-                    document.getElementById('answerText').textContent = `Correct Answer: ${data.answer.toUpperCase()}`;
-                } else {
-                    document.getElementById('answerText').textContent = 'Correct Answer: -';
+                // Update Answer Badge with actual answer text
+                let answerLetter = data.answer ? data.answer.toUpperCase() : "-";
+                let answerIndex = ['A','B','C','D'].indexOf(answerLetter);
+
+                let answerValue = "";
+
+                if (answerIndex !== -1 && data.options && data.options[answerIndex]) {
+                    answerValue = data.options[answerIndex];
                 }
+
+                document.getElementById('answerText').textContent = 
+                    `Correct Answer: ${answerLetter} (${answerValue})`;
 
                 // Update Explanation
                 if (data.explanation && data.explanation.trim()) {
